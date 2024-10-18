@@ -21,6 +21,8 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url} - ${rt}`);
 });
 
+
+
 // Timing
 app.use(async (ctx, next) => {
   const start = Date.now();
