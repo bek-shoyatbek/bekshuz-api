@@ -10,7 +10,6 @@ try {
   if (!MONGODB_URI) {
     throw new Error("MONGODB_URI is not defined in environment variables");
   }
-  console.log("MONGODB_URI ", MONGODB_URI);
 
   const client = new MongoClient();
 
