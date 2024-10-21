@@ -36,4 +36,4 @@ jobs:
         with:
           project: "bekshoyatbe-bekshuz-api-66"
           entrypoint: "server.ts"
-          root: ""
+          root: "."
