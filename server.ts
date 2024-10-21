@@ -3,6 +3,7 @@ import { oakCors } from "./deps.ts";
 import db from "./config/db.ts";
 import articleRoutes from "./routes/articles.ts";
 import animeRoutes from "./routes/animes.ts";
+import projectRoutes from "./routes/projects.ts";
 
 if (!db) {
   console.error("Database connection failed. Exiting the application.");
@@ -36,7 +37,7 @@ app.use(articleRoutes.routes());
 app.use(articleRoutes.allowedMethods());
 app.use(animeRoutes.routes());
 app.use(animeRoutes.allowedMethods());
-
+app.use(projectRoutes.routes());
 // Start the server
 const PORT = Number(Deno.env.get("PORT")) || 8000;
 console.log(`Server running on http://localhost:${PORT}`);
