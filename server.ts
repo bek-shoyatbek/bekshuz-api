@@ -38,5 +38,6 @@ app.use(animeRoutes.routes());
 app.use(animeRoutes.allowedMethods());
 
 // Start the server
-console.log("Server running on http://localhost:8000");
-await app.listen({ port: 8000 });
+const PORT = Number(Deno.env.get("PORT")) || 8000;
+console.log(`Server running on http://localhost:${PORT}`);
+await app.listen({ port: PORT });
