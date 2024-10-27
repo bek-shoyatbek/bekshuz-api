@@ -48,10 +48,11 @@ router.post("/articles", async (ctx) => {
   try {
     const formData = await ctx.request.body({ type: "form-data" }).value.read();
     const title = formData.fields.title;
-    const author = formData.fields.author;
+    const description = formData.fields.description;
+    const category = formData.fields.category;
     const markdownFile = formData.files?.[0];
 
-    if (!markdownFile || !title || !author) {
+    if (!markdownFile || !title || !description || !category) {
       ctx.response.status = 400;
       ctx.response.body = { message: "Missing required fields" };
       return;
@@ -64,7 +65,8 @@ router.post("/articles", async (ctx) => {
     // Create article record
     const newArticle = await articles.insertOne({
       title,
-      author,
+      description,
+      category,
       contentUrl: filename,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -85,7 +87,8 @@ router.put("/articles/:id", async (ctx) => {
     const id = ctx.params.id;
     const formData = await ctx.request.body({ type: "form-data" }).value.read();
     const title = formData.fields.title;
-    const author = formData.fields.author;
+    const description = formData.fields.description;
+    const category = formData.fields.category;
     const markdownFile = formData.files?.[0];
 
     const article = await articles.findOne({ _id: new ObjectId(id) });
@@ -100,7 +103,8 @@ router.put("/articles/:id", async (ctx) => {
     };
 
     if (title) updateData.title = title;
-    if (author) updateData.author = author;
+    if (description) updateData.description = description;
+    if (category) updateData.category = category;
 
     if (markdownFile) {
       // Generate new filename and save the file

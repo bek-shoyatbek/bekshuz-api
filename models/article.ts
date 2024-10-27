@@ -6,7 +6,8 @@ export interface ArticleSchema {
   _id: { $oid: string };
   title: string;
   contentUrl: string;
-  author: string;
+  category: string;
+  description: string;
   createdAt: Date;
   updatedAt: Date;
 }
