@@ -1,3 +1,4 @@
+import { ObjectId } from "https://deno.land/x/web_bson@v0.2.5/mod.ts";
 import { Router } from "../deps.ts";
 import animes from "../models/anime.ts";
 
@@ -19,6 +20,12 @@ router.post("/animes", async (ctx) => {
     updatedAt: new Date(),
   });
   ctx.response.body = newAnime;
+});
+
+router.delete("/animes/:id", async (ctx) => {
+  const id = ctx.params.id;
+  const deletedAnime = await animes.deleteOne({ _id: new ObjectId(id) });
+  ctx.response.body = deletedAnime;
 });
 
 

@@ -5,7 +5,7 @@ import db from "../config/db.ts";
 export interface ArticleSchema {
   _id: { $oid: string };
   title: string;
-  content: string;
+  contentUrl: string;
   author: string;
   createdAt: Date;
   updatedAt: Date;
