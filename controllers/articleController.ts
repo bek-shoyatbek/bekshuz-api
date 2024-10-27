@@ -1,74 +1,75 @@
 import { Router } from "../deps.ts";
-import { ensureDir, copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
-import articles, { type ArticleSchema } from "../models/article.ts";
 import { ObjectId } from "https://deno.land/x/web_bson@v0.2.5/mod.ts";
-import { PUBLIC_DIR } from "../constants/index.ts";
+import articles, { type ArticleSchema } from "../models/article.ts";
+
 
 const router = new Router();
-const CONTENT_DIR = PUBLIC_DIR; // Directory to store markdown files
-
-// Ensure content directory exists
-await ensureDir(CONTENT_DIR);
-
-// Helper function to generate unique filename
-function generateFilename(title: string): string {
-  const timestamp = new Date().getTime();
-  const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  return `${cleanTitle}-${timestamp}.md`;
-}
 
 // Get all articles
 router.get("/articles", async (ctx) => {
-  const allArticles = await articles.find().toArray();
-  ctx.response.body = allArticles;
-});
-
-// Get single article with content
-router.get("/articles/:id", async (ctx) => {
-  const id = ctx.params.id;
-  const article = await articles.findOne({ _id: { $oid: id } });
-
-  if (!article) {
-    ctx.response.status = 404;
-    ctx.response.body = { message: "Article not found" };
-    return;
-  }
-
-  // Read the markdown content
   try {
-    const content = await Deno.readTextFile(`${CONTENT_DIR}/${article.contentUrl}`);
-    ctx.response.body = { ...article, content };
-  } catch (_error) {
+    // You might want to exclude the full content when fetching all articles
+    // to reduce payload size
+    const allArticles = await articles.find({}, {
+      projection: {
+        content: 0  // Exclude content from the list view
+      }
+    }).toArray();
+
+    ctx.response.body = allArticles;
+    // deno-lint-ignore no-explicit-any
+  } catch (error: any) {
     ctx.response.status = 500;
-    ctx.response.body = { message: "Error reading article content" };
+    ctx.response.body = {
+      message: "Error fetching articles",
+      error: error.message
+    };
   }
 });
 
-// Create new article with markdown content
+// Get single article with full content
+router.get("/articles/:id", async (ctx) => {
+  try {
+    const id = ctx.params.id;
+    const article = await articles.findOne({ _id: new ObjectId(id) });
+
+    if (!article) {
+      ctx.response.status = 404;
+      ctx.response.body = { message: "Article not found" };
+      return;
+    }
+
+    ctx.response.body = article;
+    // deno-lint-ignore no-explicit-any
+  } catch (error: any) {
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: "Error fetching article",
+      error: error.message
+    };
+  }
+});
+
+// Create new article
 router.post("/articles", async (ctx) => {
   try {
-    const formData = await ctx.request.body({ type: "form-data" }).value.read();
-    const title = formData.fields.title;
-    const description = formData.fields.description;
-    const category = formData.fields.category;
-    const markdownFile = formData.files?.[0];
+    const body = await ctx.request.body().value;
+    const { title, content, author, description, tags, isPublished = false } = body;
 
-    if (!markdownFile || !title || !description || !category) {
+    // Validate required fields
+    if (!title || !content || !author) {
       ctx.response.status = 400;
       ctx.response.body = { message: "Missing required fields" };
       return;
     }
 
-    // Generate filename and save the file
-    const filename = generateFilename(title);
-    await copy(markdownFile.filename!, `${CONTENT_DIR}/${filename}`);
-
-    // Create article record
     const newArticle = await articles.insertOne({
       title,
+      content,
+      author,
       description,
-      category,
-      contentUrl: filename,
+      tags,
+      isPublished,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -78,19 +79,19 @@ router.post("/articles", async (ctx) => {
     // deno-lint-ignore no-explicit-any
   } catch (error: any) {
     ctx.response.status = 500;
-    ctx.response.body = { message: "Error creating article", error: error.message };
+    ctx.response.body = {
+      message: "Error creating article",
+      error: error.message
+    };
   }
 });
 
-// Update article and its content
+// Update article
 router.put("/articles/:id", async (ctx) => {
   try {
     const id = ctx.params.id;
-    const formData = await ctx.request.body({ type: "form-data" }).value.read();
-    const title = formData.fields.title;
-    const description = formData.fields.description;
-    const category = formData.fields.category;
-    const markdownFile = formData.files?.[0];
+    const body = await ctx.request.body().value;
+    const { title, content, author, description, tags, isPublished } = body;
 
     const article = await articles.findOne({ _id: new ObjectId(id) });
     if (!article) {
@@ -100,69 +101,98 @@ router.put("/articles/:id", async (ctx) => {
     }
 
     const updateData: Partial<ArticleSchema> = {
-      updatedAt: new Date(),
+      updatedAt: new Date()
     };
 
-    if (title) updateData.title = title;
-    if (description) updateData.description = description;
-    if (category) updateData.category = category;
-
-    if (markdownFile) {
-      // Generate new filename and save the file
-      const filename = generateFilename(title || article.title);
-      await copy(markdownFile.filename!, `${CONTENT_DIR}/${filename}`);
-
-      // Delete old file
-      try {
-        await Deno.remove(`${CONTENT_DIR}/${article.contentUrl}`);
-      } catch (_error) {
-        // Ignore error if old file doesn't exist
-      }
-
-      updateData.contentUrl = filename;
-    }
+    // Only update fields that are provided
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (author !== undefined) updateData.author = author;
+    if (description !== undefined) updateData.description = description;
+    if (tags !== undefined) updateData.tags = tags;
+    if (isPublished !== undefined) updateData.isPublished = isPublished;
 
     await articles.updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     );
 
-    ctx.response.body = { message: "Article updated successfully" };
+    ctx.response.body = {
+      message: "Article updated successfully",
+      id
+    };
+
     // deno-lint-ignore no-explicit-any
   } catch (error: any) {
     ctx.response.status = 500;
-    ctx.response.body = { message: "Error updating article", error: error.message };
+    ctx.response.body = {
+      message: "Error updating article",
+      error: error.message
+    };
   }
 });
 
-// Delete article and its content
+// Delete article
 router.delete("/articles/:id", async (ctx) => {
   try {
     const id = ctx.params.id;
-    const article = await articles.findOne({ _id: new ObjectId(id) });
+    const result = await articles.deleteOne({ _id: new ObjectId(id) });
 
-    if (!article) {
+    if (result === 0) {
       ctx.response.status = 404;
       ctx.response.body = { message: "Article not found" };
       return;
     }
 
-    // Delete the markdown file
-    try {
-      await Deno.remove(`${CONTENT_DIR}/${article.contentUrl}`);
-      // deno-lint-ignore no-explicit-any
-    } catch (error: any) {
-      console.error(`Error deleting file: ${error.message}`);
-    }
-
-    // Delete the article record
-    await articles.deleteOne({ _id: new ObjectId(id) });
-
     ctx.response.body = { message: "Article deleted successfully" };
+
     // deno-lint-ignore no-explicit-any
   } catch (error: any) {
     ctx.response.status = 500;
-    ctx.response.body = { message: "Error deleting article", error: error.message };
+    ctx.response.body = {
+      message: "Error deleting article",
+      error: error.message
+    };
+  }
+});
+
+// Search articles
+router.get("/articles/search", async (ctx) => {
+  try {
+    const query = ctx.request.url.searchParams.get("q") || "";
+    const tag = ctx.request.url.searchParams.get("tag");
+    const author = ctx.request.url.searchParams.get("author");
+
+    const searchCriteria: any = {};
+
+    if (query) {
+      searchCriteria.$or = [
+        { title: new RegExp(query, "i") },
+        { content: new RegExp(query, "i") }
+      ];
+    }
+
+    if (tag) {
+      searchCriteria.tags = tag;
+    }
+
+    if (author) {
+      searchCriteria.author = new RegExp(author, "i");
+    }
+
+    const foundArticles = await articles.find(searchCriteria, {
+      projection: { content: 0 }  // Exclude content from search results
+    }).toArray();
+
+    ctx.response.body = foundArticles;
+
+    // deno-lint-ignore no-explicit-any
+  } catch (error: any) {
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: "Error searching articles",
+      error: error.message
+    };
   }
 });
 
