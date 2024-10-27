@@ -3,9 +3,9 @@ import db from "../config/db.ts";
 export interface AnimeSchema {
   _id: { $oid: string };
   title: string;
-  description: string;
-  genre: string[];
-  rating: number;
+  genre: string;
+  youtubeLink: string;
+  insight: string;
   createdAt: Date;
   updatedAt: Date;
 }

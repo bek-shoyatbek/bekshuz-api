@@ -10,12 +10,17 @@ router.get("/animes", async (ctx) => {
 });
 
 router.post("/animes", async (ctx) => {
-  const { title, description, genre, rating } = await ctx.request.body().value;
+  const { title, genre, youtubeLink, insight } = await ctx.request.body().value;
+  if (!title || !genre || !youtubeLink || !insight) {
+    ctx.response.status = 400;
+    ctx.response.body = { message: "All fields are required" };
+    return;
+  }
   const newAnime = await animes.insertOne({
     title,
-    description,
     genre,
-    rating,
+    youtubeLink,
+    insight,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
