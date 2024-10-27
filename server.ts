@@ -3,7 +3,7 @@ import db from "./config/db.ts";
 import articleRoutes from "./routes/articles.ts";
 import animeRoutes from "./routes/animes.ts";
 import projectRoutes from "./routes/projects.ts";
-import { CONTENT_DIR } from "./constants/index.ts";
+import { PUBLIC_DIR } from "./constants/index.ts";
 
 if (!db) {
   console.error("Database connection failed. Exiting the application.");
@@ -33,11 +33,11 @@ app.use(async (ctx, next) => {
 });
 
 app.use(async (ctx, next) => {
-  if (ctx.request.url.pathname.startsWith("/content/")) {
-    const path = ctx.request.url.pathname.replace("/content/", "");
+  if (ctx.request.url.pathname.startsWith("/public/")) {
+    const path = ctx.request.url.pathname.replace("/public/", "");
     try {
       await send(ctx, path, {
-        root: CONTENT_DIR,
+        root: PUBLIC_DIR,
         index: "index.html",
       });
     } catch {

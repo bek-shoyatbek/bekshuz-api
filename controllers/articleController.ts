@@ -2,9 +2,10 @@ import { Router } from "../deps.ts";
 import { ensureDir, copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import articles, { type ArticleSchema } from "../models/article.ts";
 import { ObjectId } from "https://deno.land/x/web_bson@v0.2.5/mod.ts";
+import { PUBLIC_DIR } from "../constants/index.ts";
 
 const router = new Router();
-const CONTENT_DIR = "./content"; // Directory to store markdown files
+const CONTENT_DIR = PUBLIC_DIR; // Directory to store markdown files
 
 // Ensure content directory exists
 await ensureDir(CONTENT_DIR);
